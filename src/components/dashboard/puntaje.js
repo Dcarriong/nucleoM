@@ -1,28 +1,43 @@
-
 import React, { useState } from 'react';
 import { ref, push } from 'firebase/database';
-import { db } from '../../firebase/config';
+import { db, auth } from '../../firebase/config';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../../firebase/config';
 
 const Puntaje = () => {
   const [juego, setJuego] = useState('');
   const [puntaje, setPuntaje] = useState('');
+  const [fecha, setFecha] = useState('');
   const [user] = useAuthState(auth);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const puntajeRef = ref(db, `puntajes/${user.uid}/${juego}`);
-    await push(puntajeRef, parseInt(puntaje));
-    setPuntaje('');
+
+    if (!user) return alert('Debes iniciar sesión');
+    if (juego.length > 100) return alert('El nombre no es valido');
+    const puntuacion = parseInt(puntaje);
+    if (isNaN(puntuacion) || puntuacion < 0 || puntuacion > 999999) {
+      return alert('La puntuación es exagerada');
+    }
+
+    const scoreData = {
+      game: juego,
+      score: puntuacion,
+      date: fecha || new Date().toISOString().split('T')[0] 
+    };
+
+    const scoreRef = ref(db, `users/${user.uid}/scores`);
+    await push(scoreRef, scoreData);
+
+    alert(' Puntaje guardado correctamente');
     setJuego('');
+    setPuntaje('');
+    setFecha('');
   };
 
- 
   const styles = {
     formContainer: {
       padding: '2rem',
-      background: 'linear-gradient(135deg,rgb(220, 79, 206),rgb(119, 32, 136))', 
+      background: 'linear-gradient(135deg,rgb(220, 79, 206),rgb(119, 32, 136))',
       borderRadius: '8px',
       boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)',
       color: '#fff',
@@ -71,6 +86,7 @@ const Puntaje = () => {
         onChange={(e) => setJuego(e.target.value)}
         required
         style={styles.input}
+        maxLength={100}
       />
       <input
         type="number"
@@ -78,6 +94,15 @@ const Puntaje = () => {
         value={puntaje}
         onChange={(e) => setPuntaje(e.target.value)}
         required
+        style={styles.input}
+        min={0}
+        max={999999}
+      />
+      <input
+        type="date"
+        placeholder="Fecha (opcional)"
+        value={fecha}
+        onChange={(e) => setFecha(e.target.value)}
         style={styles.input}
       />
       <button
